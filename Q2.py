@@ -2,6 +2,9 @@ import pandas as pd
 from kneed import KneeLocator
 import matplotlib.pyplot as plt
 from sklearn.cluster import KMeans
+from sklearn.cluster import DBSCAN
+from sklearn.neighbors import NearestNeighbors
+import numpy as np
 
 
 def read_data_set():
@@ -12,13 +15,22 @@ def read_data_set():
     return dataset1, dataset2
 
 
+colors = ['red', 'green', 'yellow', 'blue', 'black']
+
+
 def start():
     # 1: loading datasets
     dataset1, dataset2 = read_data_set()
 
-    # 2: cluster data with kmeans
-    cluster_dataset_with_kmeans(dataset1, 1, 50)
-    cluster_dataset_with_kmeans(dataset2, 1, 50)
+    # 2: clustering data with kmeans
+    # cluster_dataset_with_kmeans(dataset=dataset1, min_k=1, max_k=50)
+    # cluster_dataset_with_kmeans(dataset=dataset2, min_k=1, max_k=50)
+
+    # 3: clustering data with dbscan
+    preprocessing_data_for_dbscan(dataset1)
+    preprocessing_data_for_dbscan(dataset2)
+    cluster_dataset_with_dbscan(dataset=dataset1, eps=0.12, min_samples=5)
+    cluster_dataset_with_dbscan(dataset=dataset2, eps=0.9, min_samples=5)
 
 
 def cluster_dataset_with_kmeans(dataset, min_k, max_k):
@@ -57,7 +69,7 @@ def calculate_best_k_clustering(wcss, min_k, max_k):
     :param wcss:
     :return:
     """
-    x = range(min_k, max_k + len(wcss))
+    x = range(min_k, min_k + len(wcss))
     y = wcss
     sensitivity = [1, 3, 5, 10, 100, 200, 400]
     knees = []
@@ -69,7 +81,7 @@ def calculate_best_k_clustering(wcss, min_k, max_k):
 
     print("knees")
     print(knees)
-    plt.plot(range(min_k, max_k + len(wcss)), wcss)
+    plt.plot(range(min_k, min_k + len(wcss)), wcss)
 
     plt.title('Elbow Method')
     plt.xlabel('Number of clusters')
@@ -94,3 +106,48 @@ def cluster_data_with_specific_k(k, max_iteration, n_init, data):
     kmeans.fit(data)
     print("Clustering with K = " + str(k) + " Finished")
     return kmeans
+
+
+def cluster_dataset_with_dbscan(dataset, eps, min_samples):
+    # train
+    clustering = DBSCAN(eps=eps, min_samples=min_samples).fit(dataset)
+
+    # plot
+    classes = []
+    for i in range(0, clustering.components_.shape[0]):
+        classes.append([])
+
+    for index, item in enumerate(clustering.labels_):
+        classes[item].append(dataset[index])
+
+    for i in range(0, len(classes)):
+        if len(classes[i]) == 0:
+            continue
+        plt.scatter(np.array(classes[i])[:, 0], np.array(classes[i])[:, 1], c=colors[i % 4])
+        # plt.scatter(clustering.components_[i][0], clustering.components_[i][1], s=50, c=colors[i])
+
+    plt.show()
+
+
+def preprocessing_data_for_dbscan(dataset):
+    min_distance = 100000000
+    max_distance = 0
+    average_distance = 0
+    counter = 0
+    for i in range(0, len(dataset) - 1):
+        for j in range(i, len(dataset)):
+            dist = np.linalg.norm(dataset[i] - dataset[j])
+            average_distance += dist
+            counter += 1
+            max_distance = max(max_distance, dist)
+            min_distance = min(min_distance, dist)
+    average_distance /= counter
+
+    neigh = NearestNeighbors(n_neighbors=2)
+    nbrs = neigh.fit(dataset)
+    distances, indices = nbrs.kneighbors(dataset)
+    distances = np.sort(distances, axis=0)
+    distances = distances[:, 1]
+    plt.plot(distances)
+    plt.show()
+    return min_distance, max_distance, average_distance
