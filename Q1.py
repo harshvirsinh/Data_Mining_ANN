@@ -62,7 +62,7 @@ class Perceptron:
         for x in X:
             result = self.model(x)
             Y.append(result)
-            return np.array(Y)
+        return np.array(Y)
 
     def fit(self, X, Y, epochs=1, lr=1):
 
@@ -75,6 +75,8 @@ class Perceptron:
         wt_matrix = []
 
         for i in range(epochs):
+            if i % 1000 == 0:
+                print("epoch: " + str(i))
             for x, y in zip(X, Y):
                 y_pred = self.model(x)
                 if y == 1 and y_pred == 0:
@@ -86,7 +88,8 @@ class Perceptron:
 
             wt_matrix.append(self.w)
 
-            accuracy[i] = accuracy_score(self.predict(X), Y)
+            temp = self.predict(X)
+            accuracy[i] = accuracy_score(temp, Y)
             if (accuracy[i] > max_accuracy):
                 max_accuracy = accuracy[i]
                 j = i
@@ -98,7 +101,7 @@ class Perceptron:
 
         print(max_accuracy, j)
 
-        plt.plot(accuracy.values())
+        plt.plot(list(accuracy.values()))
         plt.xlabel("Epoch #")
         plt.ylabel("Accuracy")
         plt.ylim([0, 1])
