@@ -2,6 +2,8 @@ import sklearn.datasets
 import numpy as np
 import pandas as pd
 from sklearn.model_selection import train_test_split
+from sklearn.metrics import accuracy_score
+import matplotlib.pyplot as plt
 
 
 def load_data():
@@ -19,12 +21,31 @@ def load_data():
 
 
 def start():
+    # 1: load data set completely
     x, y, data = load_data()
+
+    # 2: split data set to train and test
     X_train, X_test, Y_train, Y_test = train_test_split(x, y, test_size=0.1, stratify=y, random_state=1)
     print(X_train.mean(), X_test.mean(), x.mean())
     X_train = X_train.values
     X_test = X_test.values
+
+    # 3: create an object from class perceptron
     perceptron = Perceptron()
+
+    # 4: calculate weight matrix with 10000 epochs and learning rate 0.3
+    wt_matrix = perceptron.fit(X_train, Y_train, 10000, 0.3)
+
+    # 5: calculate weight matrix with 10000 epochs and learning rate 0.5
+    wt_matrix = perceptron.fit(X_train, Y_train, 10000, 0.5)
+
+    # 6: predict test set
+    Y_pred_test = perceptron.predict(X_test)
+
+    # 7: accuracy
+    print(accuracy_score(Y_pred_test, Y_test))
+    plt.plot(wt_matrix[-1, :])
+    plt.show()
 
 
 class Perceptron:
