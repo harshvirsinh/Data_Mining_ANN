@@ -4,6 +4,7 @@ import matplotlib.pyplot as plt
 from sklearn.cluster import KMeans
 from sklearn.cluster import DBSCAN
 from sklearn.neighbors import NearestNeighbors
+from scipy.cluster.hierarchy import dendrogram, linkage
 import numpy as np
 
 
@@ -15,22 +16,23 @@ def read_data_set():
     return dataset1, dataset2
 
 
-colors = ['red', 'green', 'yellow', 'blue', 'black']
-
-
 def start():
     # 1: loading datasets
     dataset1, dataset2 = read_data_set()
 
-    # 2: clustering data with kmeans
+    # # 2: clustering data with kmeans
     # cluster_dataset_with_kmeans(dataset=dataset1, min_k=1, max_k=50)
     # cluster_dataset_with_kmeans(dataset=dataset2, min_k=1, max_k=50)
+    #
+    # # 3: clustering data with dbscan
+    # preprocessing_data_for_dbscan(dataset1)
+    # preprocessing_data_for_dbscan(dataset2)
+    # cluster_dataset_with_dbscan(dataset=dataset1, eps=0.13, min_samples=5)
+    # cluster_dataset_with_dbscan(dataset=dataset2, eps=1.1, min_samples=4)
 
-    # 3: clustering data with dbscan
-    preprocessing_data_for_dbscan(dataset1)
-    preprocessing_data_for_dbscan(dataset2)
-    cluster_dataset_with_dbscan(dataset=dataset1, eps=0.12, min_samples=5)
-    cluster_dataset_with_dbscan(dataset=dataset2, eps=0.9, min_samples=5)
+    # 4: dendrogram
+    cluster_data_with_dendogram(dataset1)
+    cluster_data_with_dendogram(dataset2)
 
 
 def cluster_dataset_with_kmeans(dataset, min_k, max_k):
@@ -112,37 +114,15 @@ def cluster_dataset_with_dbscan(dataset, eps, min_samples):
     # train
     clustering = DBSCAN(eps=eps, min_samples=min_samples).fit(dataset)
 
-    # plot
-    classes = []
-    for i in range(0, clustering.components_.shape[0]):
-        classes.append([])
-
-    for index, item in enumerate(clustering.labels_):
-        classes[item].append(dataset[index])
-
-    for i in range(0, len(classes)):
-        if len(classes[i]) == 0:
-            continue
-        plt.scatter(np.array(classes[i])[:, 0], np.array(classes[i])[:, 1], c=colors[i % 4])
-        # plt.scatter(clustering.components_[i][0], clustering.components_[i][1], s=50, c=colors[i])
-
+    clusters = clustering.labels_
+    colors = ['royalblue', 'maroon', 'forestgreen', 'mediumorchid', 'tan', 'deeppink', 'olive', 'goldenrod',
+              'lightcyan', 'navy']
+    vectorizer = np.vectorize(lambda x: colors[x % len(colors)])
+    plt.scatter(dataset[:, 0], dataset[:, 1], c=vectorizer(clusters))
     plt.show()
 
 
 def preprocessing_data_for_dbscan(dataset):
-    min_distance = 100000000
-    max_distance = 0
-    average_distance = 0
-    counter = 0
-    for i in range(0, len(dataset) - 1):
-        for j in range(i, len(dataset)):
-            dist = np.linalg.norm(dataset[i] - dataset[j])
-            average_distance += dist
-            counter += 1
-            max_distance = max(max_distance, dist)
-            min_distance = min(min_distance, dist)
-    average_distance /= counter
-
     neigh = NearestNeighbors(n_neighbors=2)
     nbrs = neigh.fit(dataset)
     distances, indices = nbrs.kneighbors(dataset)
@@ -150,4 +130,57 @@ def preprocessing_data_for_dbscan(dataset):
     distances = distances[:, 1]
     plt.plot(distances)
     plt.show()
-    return min_distance, max_distance, average_distance
+
+
+def cluster_data_with_dendogram(dataset):
+    # ward is a method to calculate distance
+    Z = linkage(dataset, 'ward')
+
+    # # calculate full dendrogram
+    # plt.figure(figsize=(25, 10))
+    # plt.title('Hierarchical Clustering Dendrogram')
+    # plt.xlabel('sample index')
+    # plt.ylabel('distance')
+    # dendrogram(
+    #     Z,
+    #     leaf_rotation=90.,  # rotates the x axis labels
+    #     leaf_font_size=8.,  # font size for the x axis labels
+    #     show_contracted=True,
+    # )
+    # plt.show()
+
+    fancy_dendrogram(
+        Z,
+        truncate_mode='lastp',
+        p=12,
+        leaf_rotation=90.,
+        leaf_font_size=12.,
+        show_contracted=True,
+        annotate_above=10,  # useful in small plots so annotations don't overlap
+    )
+    plt.show()
+
+
+def fancy_dendrogram(*args, **kwargs):
+    max_d = kwargs.pop('max_d', None)
+    if max_d and 'color_threshold' not in kwargs:
+        kwargs['color_threshold'] = max_d
+    annotate_above = kwargs.pop('annotate_above', 0)
+
+    ddata = dendrogram(*args, **kwargs)
+
+    if not kwargs.get('no_plot', False):
+        plt.title('Hierarchical Clustering Dendrogram (truncated)')
+        plt.xlabel('sample index or (cluster size)')
+        plt.ylabel('distance')
+        for i, d, c in zip(ddata['icoord'], ddata['dcoord'], ddata['color_list']):
+            x = 0.5 * sum(i[1:3])
+            y = d[1]
+            if y > annotate_above:
+                plt.plot(x, y, 'o', c=c)
+                plt.annotate("%.3g" % y, (x, y), xytext=(0, -5),
+                             textcoords='offset points',
+                             va='top', ha='center')
+        if max_d:
+            plt.axhline(y=max_d, c='k')
+    return ddata
