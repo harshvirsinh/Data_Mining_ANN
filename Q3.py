@@ -19,13 +19,14 @@ def load_dataset():
 
 def start():
     x_train, y_train, x_test, y_test = load_dataset()
+    classify_data_by_ANN(x_train, y_train, x_test, y_test)
 
 
 def flatten_images_to_vector(X_train, X_test):
     num_pixels = X_train.shape[1] * X_train.shape[2]
     X_train = X_train.reshape(X_train.shape[0], num_pixels).astype('float32')
     X_test = X_test.reshape(X_test.shape[0], num_pixels).astype('float32')
-    return X_train, X_test
+    return X_train, X_test, num_pixels
 
 
 def normalize_data(X_train, X_test):
@@ -43,9 +44,33 @@ def one_hot_encoding(y_train, y_test):
     return y_train, y_test, num_classes
 
 
+# define baseline model
+def baseline_model(num_pixels, num_classes):
+    # create model
+    model = Sequential()
+    model.add(Dense(num_pixels, input_dim=num_pixels, init='normal', activation='relu'))
+    model.add(Dense(num_classes, init='normal', activation='softmax'))
+    # Compile model
+    model.compile(loss='categorical_crossentropy', optimizer='adam', metrics=['accuracy'])
+    return model
+
+
 def classify_data_by_ANN(X_train, y_train, X_test, y_test):
     # 1: flatten 28*28 images to a 784 vector for each image
-    X_train, X_test = flatten_images_to_vector(X_train, X_test)
+    X_train, X_test, num_pixels = flatten_images_to_vector(X_train, X_test)
 
     # 2: normalize data
     X_train, X_test = normalize_data(X_train, X_test)
+
+    # 3: one hot encoding
+    y_train, y_test, num_classes = one_hot_encoding(y_train, y_test)
+
+    # 4: build model
+    model = baseline_model(num_pixels, num_classes)
+
+    # 5: Fit the model
+    model.fit(X_train, y_train, validation_data=(X_test, y_test), nb_epoch=10, batch_size=200,
+              verbose=2)
+    # 6: Final evaluation of the model
+    scores = model.evaluate(X_test, y_test, verbose=0)
+    print("Baseline Error: %.2f%%" % (100 - scores[1] * 100))
