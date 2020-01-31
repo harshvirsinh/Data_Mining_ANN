@@ -14,7 +14,7 @@ numpy.random.seed(seed)
 
 
 def start():
-    # classify_data_by_ANN()
+    classify_data_by_ANN()
     classify_data_by_cnn()
 
 
