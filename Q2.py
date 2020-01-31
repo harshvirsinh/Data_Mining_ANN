@@ -6,6 +6,7 @@ from sklearn.cluster import DBSCAN
 from sklearn.neighbors import NearestNeighbors
 from scipy.cluster.hierarchy import dendrogram, linkage
 import numpy as np
+from sklearn.cluster import AgglomerativeClustering
 
 
 def read_data_set():
@@ -20,15 +21,15 @@ def start():
     # 1: loading datasets
     dataset1, dataset2 = read_data_set()
 
-    # # 2: clustering data with kmeans
-    # cluster_dataset_with_kmeans(dataset=dataset1, min_k=1, max_k=50)
-    # cluster_dataset_with_kmeans(dataset=dataset2, min_k=1, max_k=50)
-    #
-    # # 3: clustering data with dbscan
-    # preprocessing_data_for_dbscan(dataset1)
-    # preprocessing_data_for_dbscan(dataset2)
-    # cluster_dataset_with_dbscan(dataset=dataset1, eps=0.13, min_samples=5)
-    # cluster_dataset_with_dbscan(dataset=dataset2, eps=1.1, min_samples=4)
+    # 2: clustering data with kmeans
+    cluster_dataset_with_kmeans(dataset=dataset1, min_k=1, max_k=50)
+    cluster_dataset_with_kmeans(dataset=dataset2, min_k=1, max_k=50)
+
+    # 3: clustering data with dbscan
+    preprocessing_data_for_dbscan(dataset1)
+    preprocessing_data_for_dbscan(dataset2)
+    cluster_dataset_with_dbscan(dataset=dataset1, eps=0.13, min_samples=5)
+    cluster_dataset_with_dbscan(dataset=dataset2, eps=1.1, min_samples=4)
 
     # 4: dendrogram
     cluster_data_with_dendogram(dataset1)
@@ -136,19 +137,6 @@ def cluster_data_with_dendogram(dataset):
     # ward is a method to calculate distance
     Z = linkage(dataset, 'ward')
 
-    # # calculate full dendrogram
-    # plt.figure(figsize=(25, 10))
-    # plt.title('Hierarchical Clustering Dendrogram')
-    # plt.xlabel('sample index')
-    # plt.ylabel('distance')
-    # dendrogram(
-    #     Z,
-    #     leaf_rotation=90.,  # rotates the x axis labels
-    #     leaf_font_size=8.,  # font size for the x axis labels
-    #     show_contracted=True,
-    # )
-    # plt.show()
-
     fancy_dendrogram(
         Z,
         truncate_mode='lastp',
@@ -159,6 +147,30 @@ def cluster_data_with_dendogram(dataset):
         annotate_above=10,  # useful in small plots so annotations don't overlap
     )
     plt.show()
+
+    # finding k
+    k = find_best_k_dendrogram(Z)
+
+    cluster = AgglomerativeClustering(n_clusters=k, affinity='euclidean', linkage='ward')
+    cluster.fit_predict(dataset)
+
+    plt.scatter(dataset[:, 0], dataset[:, 1], c=cluster.labels_, cmap='rainbow')
+    plt.show()
+
+
+def find_best_k_dendrogram(Z):
+    last = Z[-10:, 2]
+    last_rev = last[::-1]
+    idxs = np.arange(1, len(last) + 1)
+    plt.plot(idxs, last_rev)
+
+    acceleration = np.diff(last, 2)  # 2nd derivative of the distances
+    acceleration_rev = acceleration[::-1]
+    plt.plot(idxs[:-2] + 1, acceleration_rev)
+    plt.show()
+    k = acceleration_rev.argmax() + 2  # if idx 0 is the max of this we want 2 clusters
+    print("Dendrogram clustering found k : " + str(k))
+    return k
 
 
 def fancy_dendrogram(*args, **kwargs):
